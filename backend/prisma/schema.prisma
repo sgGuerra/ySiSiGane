@@ -1,0 +1,39 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+model User {
+  id           String   @id @default(uuid())
+  name         String
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  role         String   @default("user")
+  createdAt    DateTime @default(now()) @map("created_at")
+  tickets      Ticket[]
+
+  @@map("users")
+}
+
+model Ticket {
+  id         String   @id @default(uuid())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId     String   @map("user_id")
+  title      String
+  gameType   String   @map("game_type")
+  gameNumber String?  @map("game_number")
+  gameDate   DateTime @map("game_date")
+  amount     Decimal? @db.Decimal(12, 2)
+  place      String?
+  status     String
+  notes      String?
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  @@index([userId, gameDate])
+  @@index([userId, status])
+  @@index([userId, gameType])
+  @@map("tickets")
+}
