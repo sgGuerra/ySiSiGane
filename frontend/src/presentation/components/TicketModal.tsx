@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import type { Ticket } from '@/src/domain/entities';
 import { TicketService } from '@/src/application/services/TicketService';
 
@@ -19,6 +20,7 @@ export function TicketModal({ isOpen, onClose, onSaved, ticket }: TicketModalPro
   const [error, setError] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showSaveConfirm, setShowSaveConfirm] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   const [formData, setFormData] = useState({
     title: '',
@@ -53,6 +55,10 @@ export function TicketModal({ isOpen, onClose, onSaved, ticket }: TicketModalPro
     setShowDeleteConfirm(false);
     setShowSaveConfirm(false);
   }, [ticket, isOpen]);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
@@ -112,12 +118,17 @@ export function TicketModal({ isOpen, onClose, onSaved, ticket }: TicketModalPro
     }
   };
 
-  if (!isOpen) return null;
+  if (!mounted || !isOpen) return null;
 
   // Delete confirmation modal
   if (showDeleteConfirm) {
-    return (
-      <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+    return createPortal(
+      <div 
+        className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+        onClick={(e) => {
+          if (e.target === e.currentTarget) setShowDeleteConfirm(false);
+        }}
+      >
         <div className="glass-panel w-full max-w-md rounded-2xl p-12 border-2 border-primary-container/20 animate-fade-in-up">
           <div className="text-center space-y-4">
             <div className="w-16 h-16 bg-primary-container/20 text-primary rounded-full flex items-center justify-center mx-auto mb-4">
@@ -144,14 +155,20 @@ export function TicketModal({ isOpen, onClose, onSaved, ticket }: TicketModalPro
             </div>
           </div>
         </div>
-      </div>
+      </div>,
+      document.body
     );
   }
 
   // Save confirmation modal
   if (showSaveConfirm) {
-    return (
-      <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+    return createPortal(
+      <div 
+        className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+        onClick={(e) => {
+          if (e.target === e.currentTarget) setShowSaveConfirm(false);
+        }}
+      >
         <div className="glass-panel w-full max-w-md rounded-2xl p-12 border-2 border-primary-container/20 animate-fade-in-up">
           <div className="text-center space-y-4">
             <div className="w-16 h-16 bg-primary-container/20 text-primary rounded-full flex items-center justify-center mx-auto mb-4">
@@ -179,12 +196,18 @@ export function TicketModal({ isOpen, onClose, onSaved, ticket }: TicketModalPro
             </div>
           </div>
         </div>
-      </div>
+      </div>,
+      document.body
     );
   }
 
-  return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm overflow-y-auto">
+  return createPortal(
+    <div 
+      className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm overflow-y-auto"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
       <div className="glass-panel w-full max-w-[900px] rounded-xl p-8 md:p-12 relative overflow-hidden animate-fade-in-up my-8">
         {/* Background Accent Glow */}
         <div className="absolute -top-24 -right-24 w-64 h-64 bg-primary/10 blur-[100px] rounded-full"></div>
@@ -348,6 +371,7 @@ export function TicketModal({ isOpen, onClose, onSaved, ticket }: TicketModalPro
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

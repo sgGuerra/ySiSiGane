@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { TicketService } from '@/src/application/services/TicketService';
 import type { Ticket } from '@/src/domain/entities';
 import { TicketModal } from '@/src/presentation/components/TicketModal';
@@ -15,6 +16,7 @@ export default function TicketsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTicket, setEditingTicket] = useState<Ticket | null>(null);
   const [ticketToDelete, setTicketToDelete] = useState<Ticket | null>(null);
+  const [mounted, setMounted] = useState(false);
 
   const loadTickets = useCallback(async () => {
     setIsLoading(true);
@@ -32,8 +34,19 @@ export default function TicketsPage() {
   }, [filterStatus, searchQuery]);
 
   useEffect(() => {
+    setMounted(true);
     loadTickets();
   }, [loadTickets]);
+
+  // Scroll lock para los modales
+  useEffect(() => {
+    if (ticketToDelete || isModalOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => { document.body.style.overflow = ''; };
+  }, [ticketToDelete, isModalOpen]);
 
   const handleOpenCreate = () => {
     setEditingTicket(null);
@@ -238,8 +251,13 @@ export default function TicketsPage() {
       )}
 
       {/* Delete Confirmation Modal */}
-      {ticketToDelete && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+      {mounted && ticketToDelete && createPortal(
+        <div 
+          className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setTicketToDelete(null);
+          }}
+        >
           <div className="glass-panel w-full max-w-md rounded-2xl p-12 border-2 border-primary-container/20 animate-fade-in-up">
             <div className="text-center space-y-4">
               <div className="w-16 h-16 bg-primary-container/20 text-primary rounded-full flex items-center justify-center mx-auto mb-4">
@@ -265,7 +283,8 @@ export default function TicketsPage() {
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Modal */}
