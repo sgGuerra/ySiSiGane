@@ -17,21 +17,25 @@ export default function TicketsPage() {
   const [editingTicket, setEditingTicket] = useState<Ticket | null>(null);
   const [ticketToDelete, setTicketToDelete] = useState<Ticket | null>(null);
   const [mounted, setMounted] = useState(false);
-
+  
+  const [page, setPage] = useState(1);
+  const [pageSize] = useState(11);
+  const [totalCount, setTotalCount] = useState(0);
   const loadTickets = useCallback(async () => {
     setIsLoading(true);
     try {
-      const query: any = { pageSize: 100 };
+      const query: any = { page, pageSize };
       if (filterStatus !== 'all') query.status = filterStatus;
       if (searchQuery) query.q = searchQuery;
       const response = await TicketService.getTickets(query);
       setTickets(response.data);
+      setTotalCount(response.meta?.total || 0);
     } catch (err) {
       console.error('Error loading tickets:', err);
     } finally {
       setIsLoading(false);
     }
-  }, [filterStatus, searchQuery]);
+  }, [filterStatus, searchQuery, page, pageSize]);
 
   useEffect(() => {
     setMounted(true);
@@ -104,6 +108,8 @@ export default function TicketsPage() {
     { label: 'PERDIDOS', value: 'Perdido' },
   ];
 
+  const totalPages = Math.ceil(totalCount / pageSize);
+
   return (
     <div>
       {/* Header */}
@@ -129,7 +135,10 @@ export default function TicketsPage() {
             type="text"
             placeholder="Buscar boleta o sorteo..."
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              setPage(1);
+            }}
             className="w-full bg-surface-container-lowest border-none rounded-full py-3 pl-12 pr-6 text-on-surface focus:ring-2 focus:ring-primary/50 transition-all"
           />
         </div>
@@ -137,7 +146,10 @@ export default function TicketsPage() {
           {filters.map((f) => (
             <button
               key={f.value}
-              onClick={() => setFilterStatus(f.value)}
+              onClick={() => {
+                setFilterStatus(f.value);
+                setPage(1);
+              }}
               className={`px-4 py-2 rounded-full font-bold text-xs md:text-sm whitespace-nowrap transition-colors flex-shrink-0 ${
                 filterStatus === f.value
                   ? 'bg-primary-container/20 border border-primary/30 text-primary'
@@ -243,10 +255,60 @@ export default function TicketsPage() {
 
       {/* No results */}
       {!isLoading && tickets.length === 0 && (
-        <div className="text-center py-12">
-          <span className="material-symbols-outlined text-6xl text-outline mb-4 block">confirmation_number</span>
-          <p className="font-title-lg text-on-surface mb-2">Sin boletas registradas</p>
-          <p className="font-body-sm text-on-surface-variant">Crea tu primera boleta para comenzar el seguimiento.</p>
+        <div className="text-center py-12 glass-panel rounded-xl">
+          <span className="material-symbols-outlined text-6xl text-on-surface-variant opacity-50 mb-4 block">confirmation_number</span>
+          <p className="font-bold text-xl text-on-surface mb-2">Sin boletas registradas</p>
+          <p className="text-sm text-on-surface-variant">Crea tu primera boleta para comenzar el seguimiento.</p>
+        </div>
+      )}
+
+      {/* Pagination */}
+      {!isLoading && totalPages > 1 && (
+        <div className="mt-8 px-6 py-4 flex flex-col md:flex-row items-center justify-between glass-panel rounded-xl gap-4">
+          <div className="text-sm text-on-surface-variant text-center md:text-left">
+            Mostrando <span className="font-bold text-on-surface">{(page - 1) * pageSize + 1}</span> a <span className="font-bold text-on-surface">{Math.min(page * pageSize, totalCount)}</span> de <span className="font-bold text-on-surface">{totalCount}</span> boletas
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+              disabled={page === 1}
+              className="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-white/10 transition-colors text-on-surface-variant disabled:opacity-20"
+            >
+              <span className="material-symbols-outlined">chevron_left</span>
+            </button>
+            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+              let pageNum: number;
+              if (totalPages <= 5) {
+                pageNum = i + 1;
+              } else if (page <= 3) {
+                pageNum = i + 1;
+              } else if (page >= totalPages - 2) {
+                pageNum = totalPages - 4 + i;
+              } else {
+                pageNum = page - 2 + i;
+              }
+              return (
+                <button
+                  key={pageNum}
+                  onClick={() => setPage(pageNum)}
+                  className={`w-10 h-10 rounded-lg font-bold text-sm flex items-center justify-center ${
+                    page === pageNum
+                      ? 'bg-primary-container text-white'
+                      : 'hover:bg-white/10 transition-colors text-on-surface-variant'
+                  }`}
+                >
+                  {pageNum}
+                </button>
+              );
+            })}
+            <button
+              onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+              disabled={page === totalPages}
+              className="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-white/10 transition-colors text-on-surface-variant disabled:opacity-20"
+            >
+              <span className="material-symbols-outlined">chevron_right</span>
+            </button>
+          </div>
         </div>
       )}
 

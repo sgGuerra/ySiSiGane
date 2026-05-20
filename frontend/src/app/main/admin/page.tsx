@@ -155,7 +155,7 @@ export default function AdminPage() {
               <tbody className="divide-y divide-white/5">
                 {tickets.map((ticket) => {
                   const statusStyle = getStatusDot(ticket.status);
-                  const userName = (ticket as any).user?.name || 'Usuario';
+                  const userName = (ticket as any).owner?.name || 'Usuario';
                   return (
                     <tr key={ticket.id} className="hover:bg-white/5 transition-colors group">
                       <td className="px-6 py-4">
