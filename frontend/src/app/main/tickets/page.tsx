@@ -109,14 +109,14 @@ export default function TicketsPage() {
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
         <div>
-          <h1 className="font-title-lg text-primary">Mis Boletas</h1>
-          <p className="text-on-surface-variant font-body-sm text-[12px]">Historial de jugadas y tickets activos</p>
+          <h1 className="font-title-lg text-primary text-2xl md:text-3xl font-bold mb-1">Mis Boletas</h1>
+          <p className="text-on-surface-variant text-xs md:text-sm">Historial de jugadas y tickets activos</p>
         </div>
         <button
           onClick={handleOpenCreate}
-          className="bg-primary-container text-on-primary-container px-6 py-2.5 rounded-full font-label-caps flex items-center gap-2 glow-red hover:bg-red-700 active:scale-95 duration-200 transition-colors"
+          className="bg-primary-container text-on-primary-container px-5 md:px-6 py-2.5 md:py-3 rounded-full text-sm md:text-base font-bold flex items-center gap-2 glow-red hover:bg-red-700 active:scale-95 duration-200 transition-colors w-full md:w-auto justify-center"
         >
-          <span className="material-symbols-outlined text-[18px]">add</span>
+          <span className="material-symbols-outlined text-lg md:text-[20px]">add</span>
           Nueva Boleta
         </button>
       </div>
@@ -138,7 +138,7 @@ export default function TicketsPage() {
             <button
               key={f.value}
               onClick={() => setFilterStatus(f.value)}
-              className={`px-4 py-2 rounded-full font-label-caps text-[10px] whitespace-nowrap transition-colors ${
+              className={`px-4 py-2 rounded-full font-bold text-xs md:text-sm whitespace-nowrap transition-colors flex-shrink-0 ${
                 filterStatus === f.value
                   ? 'bg-primary-container/20 border border-primary/30 text-primary'
                   : 'bg-white/5 border border-white/10 text-on-surface hover:bg-white/10'
@@ -159,26 +159,26 @@ export default function TicketsPage() {
         /* Ticket Cards Grid */
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {tickets.map((ticket) => (
-            <div key={ticket.id} className="glass-panel p-6 rounded-xl transition-all duration-300 relative overflow-hidden group hover:glass-panel-hover">
+            <div key={ticket.id} className="glass-panel p-5 md:p-6 rounded-xl transition-all duration-300 relative overflow-hidden group hover:glass-panel-hover flex flex-col">
               {/* Header */}
-              <div className="flex justify-between items-start mb-4">
-                <div>
-                  <span className={`px-2 py-0.5 ${getGameTypeBadge(ticket.gameType)} rounded font-label-caps text-[10px] mb-2 inline-block`}>
+              <div className="flex justify-between items-start mb-4 gap-2">
+                <div className="flex-1">
+                  <span className={`px-2 py-1 ${getGameTypeBadge(ticket.gameType)} rounded font-bold text-[10px] md:text-xs mb-2 inline-block`}>
                     {ticket.gameType}
                   </span>
-                  <h3 className="font-title-lg text-on-surface">{ticket.title}</h3>
+                  <h3 className="text-lg md:text-xl font-bold text-on-surface leading-tight break-words">{ticket.title}</h3>
                 </div>
-                <span className={`px-3 py-1 ${getStatusBadge(ticket.status)} rounded-full font-label-caps text-[10px] border`}>
+                <span className={`px-3 py-1 ${getStatusBadge(ticket.status)} rounded-full font-bold text-[10px] md:text-xs border shrink-0`}>
                   {ticket.status}
                 </span>
               </div>
 
               {/* Number */}
               {ticket.gameNumber && (
-                <div className="mb-6">
-                  <p className="text-on-surface-variant font-label-caps text-[10px] mb-2">NÚMERO JUGADO</p>
+                <div className="mb-5">
+                  <p className="text-on-surface-variant font-bold text-[10px] mb-1.5 uppercase tracking-wider">NÚMERO JUGADO</p>
                   <div className="flex gap-2 flex-wrap">
-                    <span className="px-4 h-10 flex items-center justify-center rounded bg-white/5 border border-white/10 font-data-mono text-secondary">
+                    <span className="px-4 py-2 flex items-center justify-center rounded bg-white/5 border border-white/10 font-mono text-secondary text-sm md:text-base">
                       {ticket.gameNumber}
                     </span>
                   </div>
@@ -186,16 +186,16 @@ export default function TicketsPage() {
               )}
 
               {/* Date & Value */}
-              <div className="grid grid-cols-2 gap-4 mb-6 border-t border-white/5 pt-4">
+              <div className="grid grid-cols-2 gap-4 mb-6 border-t border-white/5 pt-5 mt-auto">
                 <div>
-                  <p className="text-on-surface-variant font-label-caps text-[10px]">FECHA</p>
-                  <p className="font-body-sm text-on-surface">
+                  <p className="text-on-surface-variant font-bold text-[10px] uppercase tracking-wider mb-1">FECHA</p>
+                  <p className="text-sm md:text-base text-on-surface">
                     {new Date(ticket.gameDate).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="text-on-surface-variant font-label-caps text-[10px]">VALOR</p>
-                  <p className={`font-data-mono ${ticket.status === 'Perdido' ? 'text-on-surface-variant' : 'text-secondary'} font-title-lg`}>
+                  <p className="text-on-surface-variant font-bold text-[10px] uppercase tracking-wider mb-1">VALOR</p>
+                  <p className={`font-mono ${ticket.status === 'Perdido' ? 'text-on-surface-variant' : 'text-secondary'} text-lg md:text-xl font-bold`}>
                     {ticket.amount ? `$${ticket.amount.toLocaleString()}` : '-'}
                   </p>
                 </div>
@@ -258,25 +258,25 @@ export default function TicketsPage() {
             if (e.target === e.currentTarget) setTicketToDelete(null);
           }}
         >
-          <div className="glass-panel w-full max-w-md rounded-2xl p-12 border-2 border-primary-container/20 animate-fade-in-up">
-            <div className="text-center space-y-4">
-              <div className="w-16 h-16 bg-primary-container/20 text-primary rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="material-symbols-outlined text-4xl" style={{ fontVariationSettings: "'FILL' 1" }}>warning</span>
+          <div className="glass-panel w-full max-w-md rounded-2xl p-6 md:p-10 border-2 border-primary-container/20 animate-fade-in-up m-4">
+            <div className="text-center space-y-3 md:space-y-4">
+              <div className="w-12 h-12 md:w-16 md:h-16 bg-primary-container/20 text-primary rounded-full flex items-center justify-center mx-auto mb-2 md:mb-4">
+                <span className="material-symbols-outlined text-3xl md:text-4xl" style={{ fontVariationSettings: "'FILL' 1" }}>warning</span>
               </div>
-              <h3 className="font-headline-mobile text-white">¿Confirmar Eliminación?</h3>
-              <p className="font-body-lg text-on-surface-variant">
+              <h3 className="text-xl md:text-2xl font-bold text-white">¿Confirmar Eliminación?</h3>
+              <p className="text-sm md:text-base text-on-surface-variant px-2">
                 Esta acción eliminará permanentemente el registro de la boleta <strong>{ticketToDelete.title}</strong>. No se puede deshacer.
               </p>
-              <div className="flex flex-col gap-3 pt-4">
+              <div className="flex flex-col sm:flex-row gap-3 pt-4 md:pt-6">
                 <button
                   onClick={confirmDelete}
-                  className="w-full bg-primary-container text-white font-title-lg py-4 rounded-xl hover:brightness-125 transition-all"
+                  className="w-full sm:flex-1 bg-primary-container text-white text-sm md:text-base font-bold py-3 md:py-4 rounded-xl hover:brightness-125 transition-all"
                 >
-                  Sí, Eliminar Registro
+                  Sí, Eliminar
                 </button>
                 <button
                   onClick={() => setTicketToDelete(null)}
-                  className="w-full bg-white/5 text-white font-title-lg py-4 rounded-xl hover:bg-white/10 transition-all"
+                  className="w-full sm:flex-1 bg-white/5 text-white text-sm md:text-base font-bold py-3 md:py-4 rounded-xl hover:bg-white/10 transition-all"
                 >
                   Cancelar
                 </button>
