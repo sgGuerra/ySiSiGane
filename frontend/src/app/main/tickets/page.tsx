@@ -14,6 +14,7 @@ export default function TicketsPage() {
   const [filterStatus, setFilterStatus] = useState<FilterStatus>('all');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTicket, setEditingTicket] = useState<Ticket | null>(null);
+  const [ticketToDelete, setTicketToDelete] = useState<Ticket | null>(null);
 
   const loadTickets = useCallback(async () => {
     setIsLoading(true);
@@ -44,10 +45,12 @@ export default function TicketsPage() {
     setIsModalOpen(true);
   };
 
-  const handleDelete = async (id: string) => {
+  const confirmDelete = async () => {
+    if (!ticketToDelete) return;
     try {
-      await TicketService.deleteTicket(id);
+      await TicketService.deleteTicket(ticketToDelete.id);
       loadTickets();
+      setTicketToDelete(null);
     } catch (err) {
       console.error('Error deleting ticket:', err);
     }
@@ -201,7 +204,7 @@ export default function TicketsPage() {
                     <span className="material-symbols-outlined text-[20px]">edit</span>
                   </button>
                   <button
-                    onClick={() => handleDelete(ticket.id)}
+                    onClick={() => setTicketToDelete(ticket)}
                     className="w-9 h-9 flex items-center justify-center rounded-full bg-white/5 text-error hover:bg-error/10 active:scale-90 transition-all"
                   >
                     <span className="material-symbols-outlined text-[20px]">delete</span>
@@ -231,6 +234,37 @@ export default function TicketsPage() {
           <span className="material-symbols-outlined text-6xl text-outline mb-4 block">confirmation_number</span>
           <p className="font-title-lg text-on-surface mb-2">Sin boletas registradas</p>
           <p className="font-body-sm text-on-surface-variant">Crea tu primera boleta para comenzar el seguimiento.</p>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {ticketToDelete && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+          <div className="glass-panel w-full max-w-md rounded-2xl p-12 border-2 border-primary-container/20 animate-fade-in-up">
+            <div className="text-center space-y-4">
+              <div className="w-16 h-16 bg-primary-container/20 text-primary rounded-full flex items-center justify-center mx-auto mb-4">
+                <span className="material-symbols-outlined text-4xl" style={{ fontVariationSettings: "'FILL' 1" }}>warning</span>
+              </div>
+              <h3 className="font-headline-mobile text-white">¿Confirmar Eliminación?</h3>
+              <p className="font-body-lg text-on-surface-variant">
+                Esta acción eliminará permanentemente el registro de la boleta <strong>{ticketToDelete.title}</strong>. No se puede deshacer.
+              </p>
+              <div className="flex flex-col gap-3 pt-4">
+                <button
+                  onClick={confirmDelete}
+                  className="w-full bg-primary-container text-white font-title-lg py-4 rounded-xl hover:brightness-125 transition-all"
+                >
+                  Sí, Eliminar Registro
+                </button>
+                <button
+                  onClick={() => setTicketToDelete(null)}
+                  className="w-full bg-white/5 text-white font-title-lg py-4 rounded-xl hover:bg-white/10 transition-all"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 

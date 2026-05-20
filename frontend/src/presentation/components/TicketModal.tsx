@@ -18,6 +18,7 @@ export function TicketModal({ isOpen, onClose, onSaved, ticket }: TicketModalPro
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showSaveConfirm, setShowSaveConfirm] = useState(false);
 
   const [formData, setFormData] = useState({
     title: '',
@@ -50,6 +51,7 @@ export function TicketModal({ isOpen, onClose, onSaved, ticket }: TicketModalPro
     }
     setError(null);
     setShowDeleteConfirm(false);
+    setShowSaveConfirm(false);
   }, [ticket, isOpen]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -58,6 +60,14 @@ export function TicketModal({ isOpen, onClose, onSaved, ticket }: TicketModalPro
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (ticket) {
+      setShowSaveConfirm(true);
+    } else {
+      await executeSave();
+    }
+  };
+
+  const executeSave = async () => {
     setError(null);
     setIsLoading(true);
 
@@ -82,6 +92,7 @@ export function TicketModal({ isOpen, onClose, onSaved, ticket }: TicketModalPro
       onClose();
     } catch (err: any) {
       setError(err.message || 'Error al guardar la boleta.');
+      setShowSaveConfirm(false);
     } finally {
       setIsLoading(false);
     }
@@ -127,6 +138,41 @@ export function TicketModal({ isOpen, onClose, onSaved, ticket }: TicketModalPro
               <button
                 onClick={() => setShowDeleteConfirm(false)}
                 className="w-full bg-white/5 text-white font-title-lg py-4 rounded-xl hover:bg-white/10 transition-all"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Save confirmation modal
+  if (showSaveConfirm) {
+    return (
+      <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+        <div className="glass-panel w-full max-w-md rounded-2xl p-12 border-2 border-primary-container/20 animate-fade-in-up">
+          <div className="text-center space-y-4">
+            <div className="w-16 h-16 bg-primary-container/20 text-primary rounded-full flex items-center justify-center mx-auto mb-4">
+              <span className="material-symbols-outlined text-4xl" style={{ fontVariationSettings: "'FILL' 1" }}>save</span>
+            </div>
+            <h3 className="font-headline-mobile text-white">¿Guardar Cambios?</h3>
+            <p className="font-body-lg text-on-surface-variant">
+              ¿Estás seguro de que deseas guardar las modificaciones realizadas en la boleta <strong>{ticket?.title}</strong>?
+            </p>
+            <div className="flex flex-col gap-3 pt-4">
+              <button
+                onClick={executeSave}
+                disabled={isLoading}
+                className="w-full bg-gradient-to-r from-[#dc2626] to-[#fbbf24] text-white font-title-lg py-4 rounded-xl hover:brightness-125 transition-all disabled:opacity-70"
+              >
+                {isLoading ? 'Guardando...' : 'Sí, Guardar Cambios'}
+              </button>
+              <button
+                onClick={() => setShowSaveConfirm(false)}
+                disabled={isLoading}
+                className="w-full bg-white/5 text-white font-title-lg py-4 rounded-xl hover:bg-white/10 transition-all disabled:opacity-70"
               >
                 Cancelar
               </button>
