@@ -2,11 +2,13 @@ import { Prisma } from '../prisma-client/client';
 import client from '../prisma/client';
 import { Ticket } from '../../domain/entities/Ticket';
 import {
+  AdminStats,
   AdminTicketFilters,
   PaginatedTickets,
   PaginatedTicketsWithOwner,
   TicketFilters,
   TicketRepository,
+  TicketWithOwner,
 } from '../../domain/repositories/TicketRepository';
 
 type PrismaTicket = Prisma.TicketModel;
@@ -122,6 +124,46 @@ export class PrismaTicketRepository implements TicketRepository {
       where: { id: ticketId, userId },
     });
     return ticket ? toTicket(ticket) : null;
+  }
+
+  async getAdminStats(): Promise<Omit<AdminStats, 'activeUsers'>> {
+    const [totalTickets, statusGroups, revenueAggregate] = await Promise.all([
+      client.ticket.count(),
+      client.ticket.groupBy({
+        by: ['status'],
+        _count: { _all: true },
+      }),
+      client.ticket.aggregate({
+        _sum: { amount: true },
+      }),
+    ]);
+
+    const totalWon = statusGroups.find((g) => g.status === 'Ganado')?._count._all ?? 0;
+    const totalLost = statusGroups.find((g) => g.status === 'Perdido')?._count._all ?? 0;
+    const totalPending = statusGroups.find((g) => g.status === 'Pendiente')?._count._all ?? 0;
+
+    return {
+      totalTickets,
+      totalWon,
+      totalLost,
+      totalPending,
+      totalRevenue: revenueAggregate._sum.amount ? Number(revenueAggregate._sum.amount) : 0,
+    };
+  }
+
+  async getRecentActivity(limit: number): Promise<TicketWithOwner[]> {
+    const items = await client.ticket.findMany({
+      orderBy: { updatedAt: 'desc' },
+      take: limit,
+      include: {
+        user: { select: { id: true, name: true, email: true } },
+      },
+    });
+
+    return items.map((t) => ({
+      ...toTicket(t),
+      owner: { id: t.user.id, name: t.user.name, email: t.user.email },
+    }));
   }
 
   async update(

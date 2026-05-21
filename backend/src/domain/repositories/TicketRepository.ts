@@ -16,6 +16,15 @@ export type TicketWithOwner = Ticket & {
   owner: { id: string; name: string; email: string };
 };
 
+export type AdminStats = {
+  totalTickets: number;
+  totalWon: number;
+  totalLost: number;
+  totalPending: number;
+  totalRevenue: number;
+  activeUsers: number;
+};
+
 export type PaginatedTickets = {
   items: Ticket[];
   total: number;
@@ -35,6 +44,8 @@ export interface TicketRepository {
   findAllByUser(userId: string, filters: TicketFilters): Promise<PaginatedTickets>;
   findAll(filters: AdminTicketFilters): Promise<PaginatedTicketsWithOwner>;
   findById(ticketId: string, userId: string): Promise<Ticket | null>;
+  getAdminStats(): Promise<Omit<AdminStats, 'activeUsers'>>;
+  getRecentActivity(limit: number): Promise<TicketWithOwner[]>;
   update(
     ticketId: string,
     userId: string,

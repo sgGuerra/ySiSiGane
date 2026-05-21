@@ -19,6 +19,8 @@ export interface Ticket {
   place?: string;
   status: TicketStatus;
   notes?: string;
+  createdAt?: string;
+  updatedAt?: string;
   owner?: User;
 }
 

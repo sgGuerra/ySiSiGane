@@ -56,4 +56,8 @@ export class PrismaUserRepository implements UserRepository {
       createdAt: found.createdAt,
     };
   }
+
+  async countAll(): Promise<number> {
+    return client.user.count();
+  }
 }

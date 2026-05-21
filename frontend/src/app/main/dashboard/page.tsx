@@ -2,38 +2,64 @@
 
 import { useEffect, useState } from 'react';
 import { TicketService } from '@/src/application/services/TicketService';
+import { AdminService } from '@/src/application/services/AdminService';
+import { useAuthStore } from '@/src/application/state/AuthStore';
 import type { Ticket } from '@/src/domain/entities';
 import Link from 'next/link';
 
 export default function DashboardPage() {
+  const { user } = useAuthStore();
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    loadTickets();
-  }, []);
+    const loadTickets = async () => {
+      setErrorMessage(null);
+      setIsLoading(true);
+      try {
+        if (user?.role === 'admin') {
+          const pageSize = 200;
+          let page = 1;
+          let totalPages = 1;
+          const allTickets: Ticket[] = [];
 
-  const loadTickets = async () => {
-    setErrorMessage(null);
-    try {
-      const response = await TicketService.getTickets({ pageSize: 100 });
-      setTickets(response.data);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'No se pudieron cargar los registros.';
-      setErrorMessage(message);
-      console.error('Error loading tickets:', err);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+          do {
+            const response = await AdminService.getAllTickets({ page, pageSize });
+            allTickets.push(...response.data);
+            totalPages = response.meta.totalPages || 1;
+            page += 1;
+          } while (page <= totalPages);
+
+          setTickets(allTickets);
+        } else {
+          const response = await TicketService.getTickets({ pageSize: 1000 });
+          setTickets(response.data);
+        }
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'No se pudieron cargar los registros.';
+        setErrorMessage(message);
+        console.error('Error loading tickets:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadTickets();
+  }, [user]);
 
   const totalGames = tickets.length;
   const pendingCount = tickets.filter(t => t.status === 'Pendiente').length;
   const wonCount = tickets.filter(t => t.status === 'Ganado').length;
   const lostCount = tickets.filter(t => t.status === 'Perdido').length;
   const pendingTickets = tickets.filter(t => t.status === 'Pendiente').slice(0, 2);
-  const recentTickets = tickets.slice(0, 4);
+  const recentTickets = [...tickets]
+    .sort((a, b) => {
+      const aDate = new Date(a.updatedAt || a.createdAt || a.gameDate).getTime();
+      const bDate = new Date(b.updatedAt || b.createdAt || b.gameDate).getTime();
+      return bDate - aDate;
+    })
+    .slice(0, 4);
 
   const statCards = [
     { label: 'Total Juegos', value: totalGames, icon: 'sports_esports', color: 'text-secondary', bgColor: 'bg-secondary/10', badge: `${totalGames > 0 ? '+' + Math.round(totalGames * 0.12) + '% vs mes' : ''}` },
