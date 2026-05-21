@@ -39,5 +39,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
-.github
+/.github/
 architecture.md
+implementation_plan.md
+task.md
+/.abacusai/
+

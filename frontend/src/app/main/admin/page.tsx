@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { AdminService } from '@/src/application/services/AdminService';
+import { AdminService, type AdminStats } from '@/src/application/services/AdminService';
 import type { Ticket } from '@/src/domain/entities';
 
 export default function AdminPage() {
@@ -10,6 +10,14 @@ export default function AdminPage() {
   const [totalCount, setTotalCount] = useState(0);
   const [page, setPage] = useState(1);
   const [pageSize] = useState(10);
+  const [stats, setStats] = useState<AdminStats>({
+    totalTickets: 0,
+    totalWon: 0,
+    totalLost: 0,
+    totalPending: 0,
+    totalRevenue: 0,
+    activeUsers: 0,
+  });
 
   // Filters
   const [searchQuery, setSearchQuery] = useState('');
@@ -35,9 +43,22 @@ export default function AdminPage() {
     }
   }, [page, pageSize, searchQuery, gameTypeFilter, statusFilter]);
 
+  const loadStats = useCallback(async () => {
+    try {
+      const response = await AdminService.getStats();
+      setStats(response);
+    } catch (err) {
+      console.error('Error loading admin stats:', err);
+    }
+  }, []);
+
   useEffect(() => {
     loadTickets();
   }, [loadTickets]);
+
+  useEffect(() => {
+    loadStats();
+  }, [loadStats]);
 
   const totalPages = Math.ceil(totalCount / pageSize);
 
@@ -65,15 +86,8 @@ export default function AdminPage() {
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   };
 
-  // Summary stats
-  const totalRevenue = tickets.reduce((sum, t) => sum + (t.amount || 0), 0);
-  const wonCount = tickets.filter(t => t.status === 'Ganado').length;
-  const pendingCount = tickets.filter(t => t.status === 'Pendiente').length;
-  const lostCount = tickets.filter(t => t.status === 'Perdido').length;
-
   const handleApplyFilters = () => {
     setPage(1);
-    loadTickets();
   };
 
   return (
@@ -85,7 +99,7 @@ export default function AdminPage() {
 
       {/* Filter Bar */}
       <section className="glass-panel p-6 rounded-xl mb-6 flex flex-wrap items-end gap-6">
-        <div className="flex-1 min-w-[200px]">
+        <div className="flex-1 min-w-50">
           <label className="block font-label-caps text-on-surface-variant opacity-60 mb-2">Search Records</label>
           <input
             type="text"
@@ -155,7 +169,7 @@ export default function AdminPage() {
               <tbody className="divide-y divide-white/5">
                 {tickets.map((ticket) => {
                   const statusStyle = getStatusDot(ticket.status);
-                  const userName = (ticket as any).user?.name || 'Usuario';
+                  const userName = (ticket as any).owner?.name || 'Usuario';
                   return (
                     <tr key={ticket.id} className="hover:bg-white/5 transition-colors group">
                       <td className="px-6 py-4">
@@ -265,32 +279,32 @@ export default function AdminPage() {
           <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
             <span className="material-symbols-outlined text-[60px]" style={{ fontVariationSettings: "'FILL' 1" }}>monetization_on</span>
           </div>
-          <p className="font-label-caps text-on-surface-variant opacity-60 mb-1">Total recaudado</p>
-          <h3 className="font-display-md text-secondary">${totalRevenue.toLocaleString('en-US', { minimumFractionDigits: 2 })}</h3>
+          <p className="font-label-caps text-on-surface-variant opacity-60 mb-1">Total Ganados</p>
+          <h3 className="font-display-md text-secondary">{stats.totalWon}</h3>
         </div>
         <div className="glass-panel p-6 rounded-xl relative overflow-hidden group">
           <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
             <span className="material-symbols-outlined text-[60px]" style={{ fontVariationSettings: "'FILL' 1" }}>group</span>
           </div>
           <p className="font-label-caps text-on-surface-variant opacity-60 mb-1">Total Boletas</p>
-          <h3 className="font-display-md text-primary">{totalCount}</h3>
+          <h3 className="font-display-md text-primary">{stats.totalTickets}</h3>
         </div>
         <div className="glass-panel p-6 rounded-xl relative overflow-hidden group border-primary-container/20">
           <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
             <span className="material-symbols-outlined text-[60px] text-primary-container" style={{ fontVariationSettings: "'FILL' 1" }}>warning</span>
           </div>
           <p className="font-label-caps text-on-surface-variant opacity-60 mb-1">Perdidos</p>
-          <h3 className="font-display-md text-primary-container">{lostCount}</h3>
+          <h3 className="font-display-md text-primary-container">{stats.totalLost}</h3>
         </div>
         <div className="glass-panel p-6 rounded-xl relative overflow-hidden group">
           <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
             <span className="material-symbols-outlined text-[60px]" style={{ fontVariationSettings: "'FILL' 1" }}>confirmation_number</span>
           </div>
-          <p className="font-label-caps text-on-surface-variant opacity-60 mb-1">Ganados</p>
-          <h3 className="font-display-md text-secondary">{wonCount}</h3>
+          <p className="font-label-caps text-on-surface-variant opacity-60 mb-1">Usuarios Activos</p>
+          <h3 className="font-display-md text-secondary">{stats.activeUsers}</h3>
           <div className="mt-2 flex items-center gap-1 text-secondary font-body-sm">
             <span className="material-symbols-outlined text-[16px]">bolt</span>
-            <span>{pendingCount} pendientes</span>
+            <span>{stats.totalPending} pendientes</span>
           </div>
         </div>
       </div>

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuthStore } from '@/src/application/state/AuthStore';
+import { ConfirmModal } from '@/src/presentation/components/ConfirmModal';
 import Link from 'next/link';
 
 const navLinks = [
@@ -16,6 +17,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   const router = useRouter();
   const pathname = usePathname();
   const [mounted, setMounted] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -24,11 +26,36 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     }
   }, [isAuthenticated, router]);
 
+  useEffect(() => {
+    if (showLogoutConfirm) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [showLogoutConfirm]);
+
   if (!mounted || !isAuthenticated()) return null;
 
   const handleLogout = () => {
     logout();
     router.push('/login');
+  };
+
+  const openLogoutConfirm = () => {
+    setShowLogoutConfirm(true);
+  };
+
+  const cancelLogout = () => {
+    setShowLogoutConfirm(false);
+  };
+
+  const confirmLogout = () => {
+    setShowLogoutConfirm(false);
+    handleLogout();
   };
 
   const filteredNavLinks = navLinks.filter(link => !link.adminOnly || user?.role === 'admin');
@@ -82,7 +109,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
         {/* Logout */}
         <div className="mt-auto flex flex-col gap-1">
           <button
-            onClick={handleLogout}
+            onClick={openLogoutConfirm}
             className="flex items-center gap-4 text-on-surface-variant pl-5 hover:bg-white/5 hover:text-on-surface transition-all duration-300 ease-in-out py-3 w-full text-left"
           >
             <span className="material-symbols-outlined">logout</span>
@@ -118,6 +145,18 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
           {children}
         </div>
       </main>
+
+      <ConfirmModal
+        isOpen={showLogoutConfirm}
+        onConfirm={confirmLogout}
+        onCancel={cancelLogout}
+        title="¿Cerrar sesión?"
+        description="¿Deseas cerrar sesión ahora?"
+        confirmText="Sí, cerrar sesión"
+        cancelText="Cancelar"
+        icon="logout"
+        variant="danger"
+      />
 
       {/* Mobile Bottom Navigation */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-surface-container-low/80 backdrop-blur-xl border-t border-white/10 flex justify-around items-center py-3 z-50">

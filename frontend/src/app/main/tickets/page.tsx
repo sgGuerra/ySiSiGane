@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { TicketService } from '@/src/application/services/TicketService';
 import type { Ticket } from '@/src/domain/entities';
 import { TicketModal } from '@/src/presentation/components/TicketModal';
@@ -14,25 +15,46 @@ export default function TicketsPage() {
   const [filterStatus, setFilterStatus] = useState<FilterStatus>('all');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTicket, setEditingTicket] = useState<Ticket | null>(null);
-
+  const [ticketToDelete, setTicketToDelete] = useState<Ticket | null>(null);
+  const [mounted, setMounted] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  
+  const [page, setPage] = useState(1);
+  const [pageSize] = useState(11);
+  const [totalCount, setTotalCount] = useState(0);
   const loadTickets = useCallback(async () => {
     setIsLoading(true);
+    setErrorMessage(null);
     try {
-      const query: any = { pageSize: 100 };
+      const query: any = { page, pageSize };
       if (filterStatus !== 'all') query.status = filterStatus;
       if (searchQuery) query.q = searchQuery;
       const response = await TicketService.getTickets(query);
       setTickets(response.data);
+      setTotalCount(response.meta?.total || 0);
     } catch (err) {
+      const message = err instanceof Error ? err.message : 'No se pudieron cargar las boletas.';
+      setErrorMessage(message);
       console.error('Error loading tickets:', err);
     } finally {
       setIsLoading(false);
     }
-  }, [filterStatus, searchQuery]);
+  }, [filterStatus, searchQuery, page, pageSize]);
 
   useEffect(() => {
+    setMounted(true);
     loadTickets();
   }, [loadTickets]);
+
+  // Scroll lock para los modales
+  useEffect(() => {
+    if (ticketToDelete || isModalOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => { document.body.style.overflow = ''; };
+  }, [ticketToDelete, isModalOpen]);
 
   const handleOpenCreate = () => {
     setEditingTicket(null);
@@ -44,10 +66,12 @@ export default function TicketsPage() {
     setIsModalOpen(true);
   };
 
-  const handleDelete = async (id: string) => {
+  const confirmDelete = async () => {
+    if (!ticketToDelete) return;
     try {
-      await TicketService.deleteTicket(id);
+      await TicketService.deleteTicket(ticketToDelete.id);
       loadTickets();
+      setTicketToDelete(null);
     } catch (err) {
       console.error('Error deleting ticket:', err);
     }
@@ -88,22 +112,35 @@ export default function TicketsPage() {
     { label: 'PERDIDOS', value: 'Perdido' },
   ];
 
+  const totalPages = Math.ceil(totalCount / pageSize);
+
   return (
     <div>
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
         <div>
-          <h1 className="font-title-lg text-primary">Mis Boletas</h1>
-          <p className="text-on-surface-variant font-body-sm text-[12px]">Historial de jugadas y tickets activos</p>
+          <h1 className="font-title-lg text-primary text-2xl md:text-3xl font-bold mb-1">Mis Boletas</h1>
+          <p className="text-on-surface-variant text-xs md:text-sm">Historial de jugadas y tickets activos</p>
         </div>
         <button
           onClick={handleOpenCreate}
-          className="bg-primary-container text-on-primary-container px-6 py-2.5 rounded-full font-label-caps flex items-center gap-2 glow-red hover:bg-red-700 active:scale-95 duration-200 transition-colors"
+          className="bg-primary-container text-on-primary-container px-5 md:px-6 py-2.5 md:py-3 rounded-full text-sm md:text-base font-bold flex items-center gap-2 glow-red hover:bg-red-700 active:scale-95 duration-200 transition-colors w-full md:w-auto justify-center"
         >
-          <span className="material-symbols-outlined text-[18px]">add</span>
+          <span className="material-symbols-outlined text-lg md:text-[20px]">add</span>
           Nueva Boleta
         </button>
       </div>
+
+      {/* Filters */}
+      {errorMessage && (
+        <div className="mb-6 glass-panel border border-primary-container/30 rounded-xl p-4 flex items-start gap-3">
+          <span className="material-symbols-outlined text-primary mt-0.5">error</span>
+          <div>
+            <p className="font-bold text-on-surface">No se pudieron cargar las boletas</p>
+            <p className="text-on-surface-variant text-sm">{errorMessage}</p>
+          </div>
+        </div>
+      )}
 
       {/* Filters */}
       <div className="flex flex-col md:flex-row gap-4 mb-12 items-center justify-between">
@@ -113,7 +150,10 @@ export default function TicketsPage() {
             type="text"
             placeholder="Buscar boleta o sorteo..."
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              setPage(1);
+            }}
             className="w-full bg-surface-container-lowest border-none rounded-full py-3 pl-12 pr-6 text-on-surface focus:ring-2 focus:ring-primary/50 transition-all"
           />
         </div>
@@ -121,8 +161,11 @@ export default function TicketsPage() {
           {filters.map((f) => (
             <button
               key={f.value}
-              onClick={() => setFilterStatus(f.value)}
-              className={`px-4 py-2 rounded-full font-label-caps text-[10px] whitespace-nowrap transition-colors ${
+              onClick={() => {
+                setFilterStatus(f.value);
+                setPage(1);
+              }}
+              className={`px-4 py-2 rounded-full font-bold text-xs md:text-sm whitespace-nowrap transition-colors flex-shrink-0 ${
                 filterStatus === f.value
                   ? 'bg-primary-container/20 border border-primary/30 text-primary'
                   : 'bg-white/5 border border-white/10 text-on-surface hover:bg-white/10'
@@ -143,26 +186,26 @@ export default function TicketsPage() {
         /* Ticket Cards Grid */
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {tickets.map((ticket) => (
-            <div key={ticket.id} className="glass-panel p-6 rounded-xl transition-all duration-300 relative overflow-hidden group hover:glass-panel-hover">
+            <div key={ticket.id} className="glass-panel p-5 md:p-6 rounded-xl transition-all duration-300 relative overflow-hidden group hover:glass-panel-hover flex flex-col">
               {/* Header */}
-              <div className="flex justify-between items-start mb-4">
-                <div>
-                  <span className={`px-2 py-0.5 ${getGameTypeBadge(ticket.gameType)} rounded font-label-caps text-[10px] mb-2 inline-block`}>
+              <div className="flex justify-between items-start mb-4 gap-2">
+                <div className="flex-1">
+                  <span className={`px-2 py-1 ${getGameTypeBadge(ticket.gameType)} rounded font-bold text-[10px] md:text-xs mb-2 inline-block`}>
                     {ticket.gameType}
                   </span>
-                  <h3 className="font-title-lg text-on-surface">{ticket.title}</h3>
+                  <h3 className="text-lg md:text-xl font-bold text-on-surface leading-tight break-words">{ticket.title}</h3>
                 </div>
-                <span className={`px-3 py-1 ${getStatusBadge(ticket.status)} rounded-full font-label-caps text-[10px] border`}>
+                <span className={`px-3 py-1 ${getStatusBadge(ticket.status)} rounded-full font-bold text-[10px] md:text-xs border shrink-0`}>
                   {ticket.status}
                 </span>
               </div>
 
               {/* Number */}
               {ticket.gameNumber && (
-                <div className="mb-6">
-                  <p className="text-on-surface-variant font-label-caps text-[10px] mb-2">NÚMERO JUGADO</p>
+                <div className="mb-5">
+                  <p className="text-on-surface-variant font-bold text-[10px] mb-1.5 uppercase tracking-wider">NÚMERO JUGADO</p>
                   <div className="flex gap-2 flex-wrap">
-                    <span className="px-4 h-10 flex items-center justify-center rounded bg-white/5 border border-white/10 font-data-mono text-secondary">
+                    <span className="px-4 py-2 flex items-center justify-center rounded bg-white/5 border border-white/10 font-mono text-secondary text-sm md:text-base">
                       {ticket.gameNumber}
                     </span>
                   </div>
@@ -170,16 +213,16 @@ export default function TicketsPage() {
               )}
 
               {/* Date & Value */}
-              <div className="grid grid-cols-2 gap-4 mb-6 border-t border-white/5 pt-4">
+              <div className="grid grid-cols-2 gap-4 mb-6 border-t border-white/5 pt-5 mt-auto">
                 <div>
-                  <p className="text-on-surface-variant font-label-caps text-[10px]">FECHA</p>
-                  <p className="font-body-sm text-on-surface">
+                  <p className="text-on-surface-variant font-bold text-[10px] uppercase tracking-wider mb-1">FECHA</p>
+                  <p className="text-sm md:text-base text-on-surface">
                     {new Date(ticket.gameDate).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="text-on-surface-variant font-label-caps text-[10px]">VALOR</p>
-                  <p className={`font-data-mono ${ticket.status === 'Perdido' ? 'text-on-surface-variant' : 'text-secondary'} font-title-lg`}>
+                  <p className="text-on-surface-variant font-bold text-[10px] uppercase tracking-wider mb-1">VALOR</p>
+                  <p className={`font-mono ${ticket.status === 'Perdido' ? 'text-on-surface-variant' : 'text-secondary'} text-lg md:text-xl font-bold`}>
                     {ticket.amount ? `$${ticket.amount.toLocaleString()}` : '-'}
                   </p>
                 </div>
@@ -201,7 +244,7 @@ export default function TicketsPage() {
                     <span className="material-symbols-outlined text-[20px]">edit</span>
                   </button>
                   <button
-                    onClick={() => handleDelete(ticket.id)}
+                    onClick={() => setTicketToDelete(ticket)}
                     className="w-9 h-9 flex items-center justify-center rounded-full bg-white/5 text-error hover:bg-error/10 active:scale-90 transition-all"
                   >
                     <span className="material-symbols-outlined text-[20px]">delete</span>
@@ -227,11 +270,98 @@ export default function TicketsPage() {
 
       {/* No results */}
       {!isLoading && tickets.length === 0 && (
-        <div className="text-center py-12">
-          <span className="material-symbols-outlined text-6xl text-outline mb-4 block">confirmation_number</span>
-          <p className="font-title-lg text-on-surface mb-2">Sin boletas registradas</p>
-          <p className="font-body-sm text-on-surface-variant">Crea tu primera boleta para comenzar el seguimiento.</p>
+        <div className="text-center py-12 glass-panel rounded-xl">
+          <span className="material-symbols-outlined text-6xl text-on-surface-variant opacity-50 mb-4 block">confirmation_number</span>
+          <p className="font-bold text-xl text-on-surface mb-2">Sin boletas registradas</p>
+          <p className="text-sm text-on-surface-variant">Crea tu primera boleta para comenzar el seguimiento.</p>
         </div>
+      )}
+
+      {/* Pagination */}
+      {!isLoading && totalPages > 1 && (
+        <div className="mt-8 px-6 py-4 flex flex-col md:flex-row items-center justify-between glass-panel rounded-xl gap-4">
+          <div className="text-sm text-on-surface-variant text-center md:text-left">
+            Mostrando <span className="font-bold text-on-surface">{(page - 1) * pageSize + 1}</span> a <span className="font-bold text-on-surface">{Math.min(page * pageSize, totalCount)}</span> de <span className="font-bold text-on-surface">{totalCount}</span> boletas
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+              disabled={page === 1}
+              className="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-white/10 transition-colors text-on-surface-variant disabled:opacity-20"
+            >
+              <span className="material-symbols-outlined">chevron_left</span>
+            </button>
+            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+              let pageNum: number;
+              if (totalPages <= 5) {
+                pageNum = i + 1;
+              } else if (page <= 3) {
+                pageNum = i + 1;
+              } else if (page >= totalPages - 2) {
+                pageNum = totalPages - 4 + i;
+              } else {
+                pageNum = page - 2 + i;
+              }
+              return (
+                <button
+                  key={pageNum}
+                  onClick={() => setPage(pageNum)}
+                  className={`w-10 h-10 rounded-lg font-bold text-sm flex items-center justify-center ${
+                    page === pageNum
+                      ? 'bg-primary-container text-white'
+                      : 'hover:bg-white/10 transition-colors text-on-surface-variant'
+                  }`}
+                >
+                  {pageNum}
+                </button>
+              );
+            })}
+            <button
+              onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+              disabled={page === totalPages}
+              className="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-white/10 transition-colors text-on-surface-variant disabled:opacity-20"
+            >
+              <span className="material-symbols-outlined">chevron_right</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {mounted && ticketToDelete && createPortal(
+        <div 
+          className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setTicketToDelete(null);
+          }}
+        >
+          <div className="glass-panel w-full max-w-md rounded-2xl p-6 md:p-10 border-2 border-primary-container/20 animate-fade-in-up m-4">
+            <div className="text-center space-y-3 md:space-y-4">
+              <div className="w-12 h-12 md:w-16 md:h-16 bg-primary-container/20 text-primary rounded-full flex items-center justify-center mx-auto mb-2 md:mb-4">
+                <span className="material-symbols-outlined text-3xl md:text-4xl" style={{ fontVariationSettings: "'FILL' 1" }}>warning</span>
+              </div>
+              <h3 className="text-xl md:text-2xl font-bold text-white">¿Confirmar Eliminación?</h3>
+              <p className="text-sm md:text-base text-on-surface-variant px-2">
+                Esta acción eliminará permanentemente el registro de la boleta <strong>{ticketToDelete.title}</strong>. No se puede deshacer.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-3 pt-4 md:pt-6">
+                <button
+                  onClick={confirmDelete}
+                  className="w-full sm:flex-1 bg-primary-container text-white text-sm md:text-base font-bold py-3 md:py-4 rounded-xl hover:brightness-125 transition-all"
+                >
+                  Sí, Eliminar
+                </button>
+                <button
+                  onClick={() => setTicketToDelete(null)}
+                  className="w-full sm:flex-1 bg-white/5 text-white text-sm md:text-base font-bold py-3 md:py-4 rounded-xl hover:bg-white/10 transition-all"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>,
+        document.body
       )}
 
       {/* Modal */}

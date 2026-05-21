@@ -1,6 +1,9 @@
 import { Request, Response, NextFunction } from 'express';
 import { PrismaTicketRepository } from '../../infrastructure/repositories/PrismaTicketRepository';
+import { PrismaUserRepository } from '../../infrastructure/repositories/PrismaUserRepository';
 import { GetAllTickets } from '../../application/usecases/tickets/GetAllTickets';
+import { GetAdminStats } from '../../application/usecases/tickets/GetAdminStats';
+import { GetRecentActivity } from '../../application/usecases/tickets/GetRecentActivity';
 import {
   GAME_TYPES,
   GameType,
@@ -9,7 +12,30 @@ import {
 } from '../../domain/entities/Ticket';
 
 const ticketRepository = new PrismaTicketRepository();
+const userRepository = new PrismaUserRepository();
 const getAllTicketsUseCase = new GetAllTickets(ticketRepository);
+const getAdminStatsUseCase = new GetAdminStats(ticketRepository, userRepository);
+const getRecentActivityUseCase = new GetRecentActivity(ticketRepository);
+
+export const getStats = async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    const stats = await getAdminStatsUseCase.execute();
+    res.status(200).json({ data: stats });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getRecentActivity = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const parsedLimit = req.query.limit ? Number(req.query.limit) : 8;
+    const limit = Number.isFinite(parsedLimit) && parsedLimit > 0 ? parsedLimit : 8;
+    const items = await getRecentActivityUseCase.execute(limit);
+    res.status(200).json({ data: items });
+  } catch (error) {
+    next(error);
+  }
+};
 
 export const getAllTickets = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -44,3 +70,4 @@ export const getAllTickets = async (req: Request, res: Response, next: NextFunct
     next(error);
   }
 };
+
