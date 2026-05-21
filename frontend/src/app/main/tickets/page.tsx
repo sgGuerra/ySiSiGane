@@ -17,12 +17,14 @@ export default function TicketsPage() {
   const [editingTicket, setEditingTicket] = useState<Ticket | null>(null);
   const [ticketToDelete, setTicketToDelete] = useState<Ticket | null>(null);
   const [mounted, setMounted] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   
   const [page, setPage] = useState(1);
   const [pageSize] = useState(11);
   const [totalCount, setTotalCount] = useState(0);
   const loadTickets = useCallback(async () => {
     setIsLoading(true);
+    setErrorMessage(null);
     try {
       const query: any = { page, pageSize };
       if (filterStatus !== 'all') query.status = filterStatus;
@@ -31,6 +33,8 @@ export default function TicketsPage() {
       setTickets(response.data);
       setTotalCount(response.meta?.total || 0);
     } catch (err) {
+      const message = err instanceof Error ? err.message : 'No se pudieron cargar las boletas.';
+      setErrorMessage(message);
       console.error('Error loading tickets:', err);
     } finally {
       setIsLoading(false);
@@ -126,6 +130,17 @@ export default function TicketsPage() {
           Nueva Boleta
         </button>
       </div>
+
+      {/* Filters */}
+      {errorMessage && (
+        <div className="mb-6 glass-panel border border-primary-container/30 rounded-xl p-4 flex items-start gap-3">
+          <span className="material-symbols-outlined text-primary mt-0.5">error</span>
+          <div>
+            <p className="font-bold text-on-surface">No se pudieron cargar las boletas</p>
+            <p className="text-on-surface-variant text-sm">{errorMessage}</p>
+          </div>
+        </div>
+      )}
 
       {/* Filters */}
       <div className="flex flex-col md:flex-row gap-4 mb-12 items-center justify-between">

@@ -8,16 +8,20 @@ import Link from 'next/link';
 export default function DashboardPage() {
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
     loadTickets();
   }, []);
 
   const loadTickets = async () => {
+    setErrorMessage(null);
     try {
       const response = await TicketService.getTickets({ pageSize: 100 });
       setTickets(response.data);
     } catch (err) {
+      const message = err instanceof Error ? err.message : 'No se pudieron cargar los registros.';
+      setErrorMessage(message);
       console.error('Error loading tickets:', err);
     } finally {
       setIsLoading(false);
@@ -68,6 +72,16 @@ export default function DashboardPage() {
       <div className="mb-8">
         <h1 className="font-display-md text-primary tracking-tighter">Dashboard</h1>
       </div>
+
+      {errorMessage && (
+        <div className="mb-6 glass-panel border border-primary-container/30 rounded-xl p-4 flex items-start gap-3">
+          <span className="material-symbols-outlined text-primary mt-0.5">error</span>
+          <div>
+            <p className="font-bold text-on-surface">No se pudieron cargar los registros</p>
+            <p className="text-on-surface-variant text-sm">{errorMessage}</p>
+          </div>
+        </div>
+      )}
 
       {/* Stat Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">

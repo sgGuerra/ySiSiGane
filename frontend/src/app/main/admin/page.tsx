@@ -73,7 +73,6 @@ export default function AdminPage() {
 
   const handleApplyFilters = () => {
     setPage(1);
-    loadTickets();
   };
 
   return (
@@ -85,7 +84,7 @@ export default function AdminPage() {
 
       {/* Filter Bar */}
       <section className="glass-panel p-6 rounded-xl mb-6 flex flex-wrap items-end gap-6">
-        <div className="flex-1 min-w-[200px]">
+        <div className="flex-1 min-w-50">
           <label className="block font-label-caps text-on-surface-variant opacity-60 mb-2">Search Records</label>
           <input
             type="text"

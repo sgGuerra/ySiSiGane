@@ -1,29 +1,52 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1';
 
+const toHeaderObject = (input?: HeadersInit): Record<string, string> => {
+  if (!input) {
+    return {};
+  }
+
+  if (input instanceof Headers) {
+    const result: Record<string, string> = {};
+    input.forEach((value, key) => {
+      result[key] = value;
+    });
+    return result;
+  }
+
+  if (Array.isArray(input)) {
+    return Object.fromEntries(input);
+  }
+
+  return { ...input };
+};
+
 export class HttpClient {
   static async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-    
-    const headers: HeadersInit = {
-      'Content-Type': 'application/json',
-      ...options.headers,
-    };
+
+    const headers = toHeaderObject(options.headers);
+    headers['Content-Type'] = 'application/json';
 
     if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
+      headers.Authorization = `Bearer ${token}`;
     }
 
-    const response = await fetch(`${API_URL}${endpoint}`, {
-      ...options,
-      headers,
-    });
+    let response: Response;
+
+    try {
+      response = await fetch(`${API_URL}${endpoint}`, {
+        ...options,
+        headers,
+      });
+    } catch {
+      throw new Error('No se pudo conectar con el servidor. Verifica la API y tu conexión.');
+    }
 
     const data = await response.json().catch(() => null);
 
     if (!response.ok) {
       const errorMessage = data?.error || response.statusText || 'Error en la petición';
       if (response.status === 401) {
-        // Manejo de token expirado
         if (typeof window !== 'undefined') {
           localStorage.removeItem('token');
           window.location.href = '/login';
